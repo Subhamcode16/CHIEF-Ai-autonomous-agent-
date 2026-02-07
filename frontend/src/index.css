@@ -1,0 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: 'JetBrains Mono', source-code-pro, monospace;
+}
+
+/* ═══════════════════════════════════════
+   GLASS TOKEN SYSTEM
+   ═══════════════════════════════════════ */
+@layer base {
+  :root {
+    /* Base palette */
+    --bg-base: #060A13;
+    --bg-surface: rgba(255, 255, 255, 0.03);
+
+    /* Glass tokens */
+    --glass-bg-1: rgba(255, 255, 255, 0.025);
+    --glass-bg-2: rgba(255, 255, 255, 0.045);
+    --glass-bg-3: rgba(255, 255, 255, 0.07);
+    --glass-border: rgba(255, 255, 255, 0.07);
+    --glass-border-hover: rgba(255, 255, 255, 0.14);
+    --glass-border-active: rgba(255, 255, 255, 0.2);
+    --glass-blur-sm: 8px;
+    --glass-blur-md: 16px;
+    --glass-blur-lg: 24px;
+
+    /* Accent */
+    --accent-blue: #3B82F6;
+    --accent-green: #22C55E;
+    --accent-cyan: #06B6D4;
+    --accent-indigo: #6366F1;
+
+    /* Text */
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-muted: #475569;
+
+    /* Shadcn mappings */
+    --background: 222 52% 5%;
+    --foreground: 210 40% 96%;
+    --card: 220 40% 8%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 52% 5%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 12%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 215 25% 18%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 217 33% 15%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 217 30% 12%;
+    --input: 217 30% 14%;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
+    --chart-1: 217 91% 60%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 192 91% 36%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply text-foreground;
+    background: var(--bg-base);
+  }
+}
+
+/* ═══════════════════════════════════════
+   BACKGROUND GRADIENT MESH
+   Glass needs varied bg to blur against
+   ═══════════════════════════════════════ */
+.bg-mesh {
+  background: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 50%, rgba(59, 130, 246, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 85% 20%, rgba(99, 102, 241, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 50% 90%, rgba(6, 182, 212, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 40% at 70% 60%, rgba(34, 197, 94, 0.02) 0%, transparent 50%);
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════
+   GLASS UTILITY CLASSES
+   Structural glass, not decorative
+   ═══════════════════════════════════════ */
+
+/* Level 1 — Background panels */
+.glass-1 {
+  background: var(--glass-bg-1);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  border: 1px solid var(--glass-border);
+}
+
+/* Level 2 — Cards, containers */
+.glass-2 {
+  background: var(--glass-bg-2);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  border: 1px solid var(--glass-border);
+}
+
+/* Level 3 — Interactive, header, modals */
+.glass-3 {
+  background: var(--glass-bg-3);
+  backdrop-filter: blur(var(--glass-blur-lg));
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+  border: 1px solid var(--glass-border);
+}
+
+/* Inner highlight — simulates light refraction */
+.glass-highlight {
+  position: relative;
+}
+.glass-highlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 30%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hover lift — subtle, no bounce */
+.glass-hover {
+  transition: transform 200ms ease-out, border-color 200ms ease-out, background 200ms ease-out;
+}
+.glass-hover:hover {
+  transform: translateY(-2px);
+  border-color: var(--glass-border-hover);
+  background: var(--glass-bg-3);
+}
+
+/* ═══════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+/* ═══════════════════════════════════════
+   FONT UTILITIES
+   ═══════════════════════════════════════ */
+.font-barlow { font-family: 'Barlow Condensed', sans-serif; }
+.font-manrope { font-family: 'Manrope', sans-serif; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ═══════════════════════════════════════
+   FALLBACK — when backdrop-filter unsupported
+   ═══════════════════════════════════════ */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-1, .glass-2, .glass-3 {
+    background: rgba(15, 23, 42, 0.92);
+  }
+}
+
+@layer base {
+  [data-debug-wrapper="true"] { display: contents !important; }
+  [data-debug-wrapper="true"] > * {
+    margin-left: inherit; margin-right: inherit;
+    margin-top: inherit; margin-bottom: inherit;
+    padding-left: inherit; padding-right: inherit;
+    padding-top: inherit; padding-bottom: inherit;
+    column-gap: inherit; row-gap: inherit; gap: inherit;
+    border-left-width: inherit; border-right-width: inherit;
+    border-top-width: inherit; border-bottom-width: inherit;
+    border-left-style: inherit; border-right-style: inherit;
+    border-top-style: inherit; border-bottom-style: inherit;
+    border-left-color: inherit; border-right-color: inherit;
+    border-top-color: inherit; border-bottom-color: inherit;
+  }
+}
+
+/* ═══════════════════════════════════════
+   ONBOARDING ANIMATIONS
+   ═══════════════════════════════════════ */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) translateX(-50%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(-50%);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 300ms ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 300ms ease-out;
+}

@@ -1,0 +1,153 @@
+{
+  "brand_identity": {
+    "name": "Chief",
+    "tagline": "Your Autonomous Chief of Staff",
+    "archetype": "The Performance Pro (Executive Edition)",
+    "emotional_tone": "Authoritative, Transparent, Decisive, Calm",
+    "visual_mood": "Obsidian, Precision, Glass, Depth"
+  },
+  "typography": {
+    "primary_font": "Manrope",
+    "secondary_font": "Barlow Condensed",
+    "mono_font": "JetBrains Mono",
+    "usage": {
+      "headings": "font-barlow font-bold tracking-tight uppercase",
+      "body": "font-manrope text-slate-300 leading-relaxed",
+      "data_numerals": "font-manrope font-semibold tracking-wide",
+      "labels": "font-manrope text-xs font-bold tracking-[0.15em] uppercase text-slate-500",
+      "code_logs": "font-mono text-xs text-blue-400"
+    }
+  },
+  "colors": {
+    "theme": "dark",
+    "palette": {
+      "background": {
+        "base": "#0F172A",
+        "surface": "#1E293B",
+        "surface_highlight": "#334155"
+      },
+      "primary": {
+        "DEFAULT": "#3B82F6",
+        "foreground": "#FFFFFF",
+        "hover": "#2563EB"
+      },
+      "success": {
+        "DEFAULT": "#22C55E",
+        "glow": "rgba(34, 197, 94, 0.5)"
+      },
+      "text": {
+        "primary": "#F8FAFC",
+        "secondary": "#94A3B8",
+        "muted": "#64748B"
+      },
+      "accent": {
+        "cyan": "#06B6D4",
+        "indigo": "#6366F1"
+      }
+    },
+    "gradients": {
+      "hero_glow": "radial-gradient(circle at top center, rgba(59, 130, 246, 0.15) 0%, rgba(15, 23, 42, 0) 70%)",
+      "glass_surface": "linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.6) 100%)"
+    }
+  },
+  "layout": {
+    "grid_system": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-12 gap-6 p-6 md:p-8",
+      "marketing": "flex flex-col gap-24"
+    },
+    "containers": {
+      "card": "rounded-xl border border-white/5 bg-slate-900/50 backdrop-blur-xl shadow-2xl",
+      "panel": "h-full flex flex-col rounded-lg bg-slate-800/20 border border-slate-700/30",
+      "timeline_track": "relative flex items-center h-48 overflow-x-auto no-scrollbar scroll-smooth"
+    },
+    "spacing": {
+      "section_gap": "gap-12 md:gap-24",
+      "card_padding": "p-6 md:p-8",
+      "element_gap": "gap-4"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "h-11 px-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]",
+      "secondary": "h-11 px-6 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 transition-colors",
+      "ghost": "hover:bg-slate-800 text-slate-400 hover:text-white"
+    },
+    "inputs": {
+      "command_bar": "w-full h-14 bg-slate-900/80 border border-slate-700 rounded-lg px-5 text-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-600",
+      "task_input": "bg-transparent border-b border-slate-700 focus:border-blue-500 px-0 rounded-none h-auto py-4 text-xl font-light focus:ring-0"
+    },
+    "status_indicators": {
+      "live_pulse": "relative inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse box-shadow-[0_0_8px_#22C55E]"
+    }
+  },
+  "motion": {
+    "transitions": {
+      "default": "transition-all duration-300 ease-out",
+      "slow": "transition-all duration-700 ease-[0.16, 1, 0.3, 1]",
+      "hover_lift": "hover:-translate-y-1 hover:shadow-lg"
+    },
+    "animations": {
+      "fade_in": "animate-in fade-in zoom-in-95 duration-500",
+      "slide_up": "animate-in slide-in-from-bottom-4 fade-in duration-500",
+      "pulse_slow": "animate-pulse duration-[3000ms]"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "classes": "backdrop-blur-xl bg-slate-900/70 border border-white/10",
+      "usage": "Sticky headers, floating panels, modal overlays"
+    },
+    "borders": {
+      "subtle": "border border-slate-800",
+      "glow": "border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+    },
+    "shadows": {
+      "ambient": "shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)]",
+      "glow_blue": "shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+    }
+  },
+  "assets": {
+    "images": [
+      {
+        "category": "hero_background",
+        "url": "https://images.unsplash.com/photo-1764083267311-8a2f37838051?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGRhcmslMjBibHVlJTIwZ2VvbWV0cmljJTIwc3RydWN0dXJlfGVufDB8fHx8MTc3MDM5NzYyMXww&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract dark glass facade, use as background with heavy overlay",
+        "usage": "Landing page hero section background"
+      },
+      {
+        "category": "ai_visualization",
+        "url": "https://images.unsplash.com/photo-1766430191948-80b41be6c881?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRhcmslMjBibHVlJTIwZ2VvbWV0cmljJTIwc3RydWN0dXJlfGVufDB8fHx8MTc3MDM5NzYyMXww&ixlib=rb-4.1.0&q=85",
+        "description": "Blue geometric spiral, use for 'AI Processing' states",
+        "usage": "Decision log empty state or processing background"
+      }
+    ],
+    "icons": {
+      "library": "lucide-react",
+      "preferred_icons": [
+        "LayoutDashboard",
+        "CalendarClock",
+        "BrainCircuit",
+        "ListTodo",
+        "CheckCircle2",
+        "History",
+        "ArrowRight"
+      ]
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure text-slate-300+ on slate-900 bg. Use text-white for critical info.",
+    "focus_states": "Visible focus rings with ring-blue-500 ring-offset-2 ring-offset-slate-900",
+    "reduced_motion": "Respect prefers-reduced-motion media query"
+  },
+  "instructions_to_main_agent": [
+    "Install 'lucide-react' for icons.",
+    "Install 'clsx' and 'tailwind-merge' for class handling if not present.",
+    "Use 'sonner' for toasts.",
+    "Implement the 'TimelineView' as a horizontal flex container with time slots.",
+    "The 'ActionLog' should auto-scroll to bottom when new events arrive.",
+    "Use the dark theme by default, do not build a light mode toggle.",
+    "All interactive elements MUST have data-testid attributes.",
+    "Use the provided image URLs for the landing page hero.",
+    "Ensure the dashboard feels 'dense' but not 'cluttered' - use borders to separate areas instead of massive margins."
+  ]
+}

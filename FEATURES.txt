@@ -1,0 +1,340 @@
+# CHIEF - Feature List
+
+## ✅ IMPLEMENTED FEATURES
+
+### Core Functionality
+- **AI-Powered Task Scheduling**
+  - Gemini 2.5 Flash integration for intelligent scheduling
+  - Priority-based task organization (URGENT, HIGH, MEDIUM, LOW)
+  - Focus block scheduling (60-90 min for deep work)
+  - Automatic buffer time between events (15 min)
+  - Custom day schedule preferences (24/7 or custom hours)
+  - Dynamic AI prompt based on user preferences
+
+### Calendar Integration
+- **Google Calendar Sync**
+  - OAuth2 authentication
+  - Real-time event fetching
+  - Bidirectional sync (create, move, delete events)
+  - Day and Week view modes
+  - Visual timeline display with color-coded events
+
+### Task Management
+- **Full CRUD Operations**
+  - Add tasks with title and priority
+  - Edit task details inline
+  - Delete tasks
+  - Mark tasks complete
+  - Task persistence in MongoDB
+  - Uncompleted task filtering
+
+### Event Completion
+- **Quick Task Completion**
+  - Green checkmark button on Chief-created events
+  - One-click event completion
+  - Automatic task status update
+  - Event deletion from calendar
+  - Optimistic UI updates (instant feedback)
+  - Error rollback on failure
+  - Works on all event durations (no height restriction)
+  - Click isolation (no drag conflict)
+
+### Manual Event Control
+- **Drag & Drop Rescheduling**
+  - Drag events to new times
+  - Visual feedback during drag
+  - Manual move logging in Decision Log
+  - Purple "MANUAL" badge for user moves
+  - Reset to AI Schedule feature
+
+### Decision Logging
+- **Comprehensive Activity Tracking**
+  - AI move events (blue badge)
+  - Manual move events (purple badge)
+  - Event creation (green badge)
+  - Error tracking (red badge)
+  - Timestamped entries
+  - Reasoning display for AI decisions
+  - Clear all decisions button
+  - No auto-scroll behavior (user controls scroll position)
+
+### User Experience
+- **Onboarding Flow**
+  - Step-by-step tutorial for new users
+  - Skip option available
+  - Persistent preference storage
+  - Interactive tooltips
+
+- **Schedule Preferences**
+  - Customizable day start/end times
+  - 24/7 scheduling mode (default)
+  - Settings modal with time selectors
+  - Info tips for usage
+  - Persistent preferences per session
+
+- **Visual Design**
+  - Glassmorphism UI
+  - Dark mode interface
+  - Smooth animations
+  - Responsive layout
+  - Loading states
+  - Toast notifications
+
+### Technical Features
+- **Authentication & Sessions**
+  - Google OAuth integration
+  - Session management
+  - Secure token handling
+  - Session persistence
+
+- **Database**
+  - MongoDB integration
+  - Sessions collection
+  - Tasks collection
+  - Decisions collection
+  - Preferences storage
+
+- **Performance**
+  - Optimistic UI updates
+  - Instant visual feedback (<50ms)
+  - Background data sync
+  - Error handling with rollback
+
+---
+
+## 🚀 POTENTIAL FUTURE FEATURES
+
+### P0 - High Priority Enhancements
+
+#### Analytics Dashboard
+- **Productivity Insights**
+  - Daily/weekly/monthly task completion rate
+  - Time spent per task category
+  - Peak productivity hours analysis
+  - Goal tracking and streaks
+  - Comparison: AI schedule vs actual execution
+  - Task completion velocity trends
+
+#### Enhanced Task Management
+- **Task Categories/Tags**
+  - Custom categories (Work, Personal, Health, etc.)
+  - Color-coded tags
+  - Filter/sort by category
+  - Category-based scheduling preferences
+
+- **Recurring Tasks**
+  - Daily, weekly, monthly recurrence
+  - Custom recurrence patterns
+  - Smart scheduling for recurring items
+  - Template-based task creation
+
+- **Task Dependencies**
+  - Link related tasks
+  - Prerequisite task tracking
+  - Automatic rescheduling on dependency changes
+  - Visual dependency graph
+
+#### Calendar Enhancements
+- **Multi-Calendar Support**
+  - Work vs Personal calendar separation
+  - Calendar color coding
+  - Selective calendar sync
+  - Calendar priority settings
+
+- **Event Templates**
+  - Save frequent event patterns
+  - One-click event creation from templates
+  - Template variables (duration, attendees, etc.)
+
+### P1 - Medium Priority Features
+
+#### Time Management
+- **Break Time Management**
+  - Scheduled break reminders
+  - Focus/break timer (Pomodoro)
+  - Automatic break insertion
+  - Break duration preferences
+
+- **Time Zones**
+  - Multi-timezone support
+  - Automatic timezone conversion
+  - Meeting time suggestion across zones
+
+#### AI Enhancements
+- **Smarter Scheduling**
+  - Learn from user behavior
+  - Predictive task duration
+  - Energy level optimization (morning person vs night owl)
+  - Meeting clustering
+  - Travel time calculation
+
+- **Natural Language Input**
+  - "Schedule gym tomorrow at 6am"
+  - "Move meeting with John to Friday"
+  - Voice input support
+
+#### Collaboration
+- **Team Features**
+  - Share schedules with team
+  - Meeting availability finder
+  - Collaborative task boards
+  - Team calendar view
+
+### P2 - Nice to Have Features
+
+#### Integrations
+- **Third-Party Apps**
+  - Slack notifications
+  - Todoist sync
+  - Notion integration
+  - Email calendar invites
+  - Zoom/Meet integration
+
+#### Advanced Preferences
+- **Work Preferences**
+  - Work days only scheduling
+  - Blackout times (no scheduling periods)
+  - Focus hour blocking
+  - Meeting-free days
+  - Location-based scheduling
+
+#### Mobile & Extensions
+- **Cross-Platform**
+  - Progressive Web App (PWA)
+  - Mobile responsive design
+  - Browser extension for quick task add
+  - Desktop notifications
+
+#### Customization
+- **Personalization**
+  - Theme customization (colors, fonts)
+  - Layout preferences
+  - Widget dashboard
+  - Keyboard shortcuts
+  - Custom AI scheduling rules
+
+#### Reporting & Export
+- **Data Export**
+  - Export tasks to CSV/JSON
+  - Calendar export (iCal format)
+  - Weekly summary emails
+  - PDF reports
+  - API access for developers
+
+### P3 - Long-term Vision
+
+#### AI Assistant Expansion
+- **Proactive Assistance**
+  - Suggest task creation from emails
+  - Automatic meeting notes extraction
+  - Context-aware reminders
+  - Conflict resolution suggestions
+  - Workload balancing recommendations
+
+#### Wellness & Health
+- **Wellbeing Features**
+  - Burnout detection
+  - Work-life balance suggestions
+  - Exercise/meditation scheduling
+  - Sleep schedule optimization
+  - Stress level tracking
+
+#### Gamification
+- **Engagement Features**
+  - Achievement badges
+  - Productivity streaks
+  - Leaderboards (optional)
+  - Level progression
+  - Reward system
+
+---
+
+Calendar Integration Status 🔗
+Why: Users don't know if Google Calendar is syncing
+
+UI: Header badge showing:
+
+✅ Connected
+🔄 Syncing...
+❌ Disconnected
+Implementation: Poll /calendar/events health
+
+Notifications & Reminders 🔔
+Why: Users forget about scheduled tasks
+
+Features:
+
+Browser notifications 5 min before events
+Request notification permission on first load
+Toggle in settings
+Implementation:
+
+Web Notifications API
+Check event times every minute
+Show toast + browser notification
+
+## 🐛 KNOWN BUGS & IMPROVEMENTS
+
+### Recently Fixed
+- ✅ Event completion button height restriction
+- ✅ Drag conflict on completion button click
+- ✅ Event completion lag (optimistic updates)
+- ✅ Decision Log auto-scroll behavior
+- ✅ ERROR badges for manual moves
+- ✅ 8 AM-8 PM hardcoded constraint
+
+### Minor Improvements Needed
+- [ ] Drag threshold (5px before drag starts)
+- [ ] Better error messages for API failures
+- [ ] Loading skeleton screens
+- [ ] Offline mode support
+- [ ] Undo/redo functionality
+- [ ] Batch operations (bulk delete, bulk complete)
+
+---
+
+## 📊 METRICS TO TRACK
+
+### User Engagement
+- Daily active users
+- Average tasks created per day
+- AI plan acceptance rate
+- Manual override frequency
+- Feature adoption rates
+
+### Performance
+- Event completion time (<50ms maintained)
+- API response times
+- Planning algorithm execution time
+- Calendar sync latency
+
+### Quality
+- Error rates by endpoint
+- User-reported bugs
+- Feature request frequency
+- User satisfaction scores
+
+---
+
+## 🔒 SECURITY & COMPLIANCE
+
+### Current Implementation
+- OAuth2 for Google Calendar
+- Session-based authentication
+- Environment variable protection
+- Rate limiting (SlowAPI)
+
+### Future Considerations
+- GDPR compliance
+- Data encryption at rest
+- Two-factor authentication
+- Audit logs
+- Data retention policies
+- Privacy controls
+
+---
+
+**Last Updated:** 2026-02-07  
+**Version:** 2.0  
+**Status:** Production-ready with room for expansion
+

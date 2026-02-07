@@ -1,0 +1,160 @@
+/* ═══════════════════════════════════════
+   ANIMATIONS — 150-300ms, ease-out, no bounce
+   ═══════════════════════════════════════ */
+
+@keyframes glassFadeIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes glassSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(10px, -8px) scale(1.02); }
+  66% { transform: translate(-6px, 4px) scale(0.98); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulseRing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.2); }
+  50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+}
+
+.animate-glass-in {
+  animation: glassFadeIn 300ms ease-out forwards;
+  opacity: 0;
+}
+
+.animate-glass-up {
+  animation: glassSlideUp 400ms ease-out forwards;
+  opacity: 0;
+}
+
+.animate-orb {
+  animation: orbFloat 20s ease-in-out infinite;
+}
+
+.animate-orb-slow {
+  animation: orbFloat 30s ease-in-out infinite reverse;
+}
+
+.animate-pulse-ring {
+  animation: pulseRing 2s ease-out infinite;
+}
+
+/* Stagger delays */
+.stagger-1 { animation-delay: 80ms; }
+.stagger-2 { animation-delay: 160ms; }
+.stagger-3 { animation-delay: 240ms; }
+.stagger-4 { animation-delay: 320ms; }
+.stagger-5 { animation-delay: 400ms; }
+
+/* ═══════════════════════════════════════
+   CURRENT TIME LINE
+   ═══════════════════════════════════════ */
+.time-indicator {
+  position: absolute;
+  left: 3.5rem;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #EF4444, transparent);
+  z-index: 10;
+}
+
+.time-indicator::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+/* ═══════════════════════════════════════
+   GLASS BUTTON VARIANTS
+   ═══════════════════════════════════════ */
+.glass-btn-primary {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.15));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: white;
+  transition: all 200ms ease-out;
+}
+.glass-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(59, 130, 246, 0.2));
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px -5px rgba(59, 130, 246, 0.2);
+}
+.glass-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.glass-btn-secondary {
+  background: var(--glass-bg-2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  transition: all 200ms ease-out;
+}
+.glass-btn-secondary:hover {
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.glass-btn-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  transition: all 200ms ease-out;
+}
+.glass-btn-ghost:hover {
+  background: var(--glass-bg-2);
+  border-color: var(--glass-border);
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════
+   GLASS INPUT
+   ═══════════════════════════════════════ */
+.glass-input {
+  background: var(--glass-bg-1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  transition: all 200ms ease-out;
+}
+.glass-input:focus {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: var(--glass-bg-2);
+}
+.glass-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════
+   BACKGROUND ORBS (decorative depth)
+   ═══════════════════════════════════════ */
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  will-change: transform;
+}
