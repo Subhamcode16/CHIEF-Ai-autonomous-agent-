@@ -35,7 +35,7 @@ export default function PreferencesModal({ open, onClose, preferences, onSave })
                          text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-400/50"
                         >
                             {[...Array(24)].map((_, i) => (
-                                <option key={i} value={i} className="bg-[var(--bg-primary)]">
+                                <option key={i} value={i} className="bg-[var(--bg-primary)] text-black">
                                     {i.toString().padStart(2, '0')}:00
                                 </option>
                             ))}
@@ -54,7 +54,7 @@ export default function PreferencesModal({ open, onClose, preferences, onSave })
                          text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-400/50"
                         >
                             {[...Array(25)].map((_, i) => (
-                                <option key={i} value={i} className="bg-[var(--bg-primary)]">
+                                <option key={i} value={i} className="bg-[var(--bg-primary)] text-black">
                                     {i === 24 ? '24:00' : i.toString().padStart(2, '0') + ':00'}
                                 </option>
                             ))}

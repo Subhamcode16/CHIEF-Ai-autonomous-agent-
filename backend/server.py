@@ -476,7 +476,7 @@ async def create_task(data: TaskCreate):
 @api_router.get("/tasks")
 async def get_tasks(session_id: str):
     return await db.tasks.find(
-        {"session_id": session_id, "completed": False}, {"_id": 0}
+        {"session_id": session_id}, {"_id": 0}
     ).to_list(100)
 
 
