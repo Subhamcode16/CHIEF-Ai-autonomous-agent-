@@ -9,6 +9,8 @@ import CalendarTimeline from "@/components/CalendarTimeline";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TaskInput from "@/components/TaskInput";
 import DecisionLog from "@/components/DecisionLog";
+import ScrollDivider from "@/components/ScrollDivider";
+import AnalyticsSection from "@/components/AnalyticsSection";
 import OnboardingTooltip from "@/components/OnboardingTooltip";
 import PreferencesModal from "@/components/PreferencesModal";
 import { BrainCircuit, Loader2, Calendar, CalendarDays, RotateCcw, Settings } from "lucide-react";
@@ -510,6 +512,12 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Scroll Divider - "Your stats are below" */}
+      <ScrollDivider />
+
+      {/* Analytics Section - Below main content */}
+      <AnalyticsSection sessionId={sessionId} />
 
       {/* Onboarding overlay */}
       {onboardingStep !== null && (

@@ -682,6 +682,157 @@ async def reset_to_plan(req: PlanRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== ANALYTICS ENDPOINTS ====================
+
+@api_router.get("/analytics/summary")
+async def get_analytics_summary(session_id: str, days: int = 7):
+    """Get summary statistics for analytics dashboard."""
+    try:
+        # Calculate date range
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+        start_iso = start_date.isoformat()
+        
+        # Get tasks in date range
+        all_tasks = await db.tasks.find({
+            "session_id": session_id,
+            "created_at": {"$gte": start_iso}
+        }).to_list(1000)
+        
+        tasks_created = len(all_tasks)
+        tasks_completed = sum(1 for t in all_tasks if t.get("completed", False))
+        completion_rate = round(tasks_completed / tasks_created * 100, 1) if tasks_created > 0 else 0
+        
+        # Get AI decisions/actions
+        decisions = await db.decisions.find({
+            "session_id": session_id,
+            "timestamp": {"$gte": start_iso}
+        }).to_list(1000)
+        
+        ai_actions = len(decisions)
+        # Estimate 2 minutes saved per AI action
+        time_saved_minutes = ai_actions * 2
+        
+        return {
+            "tasks_created": tasks_created,
+            "tasks_completed": tasks_completed,
+            "completion_rate": completion_rate,
+            "ai_actions": ai_actions,
+            "time_saved_minutes": time_saved_minutes,
+            "period_days": days
+        }
+    except Exception as e:
+        logger.error(f"Analytics summary error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/analytics/trends")
+async def get_analytics_trends(session_id: str, days: int = 7):
+    """Get daily trends for charts."""
+    try:
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+        
+        # Initialize daily buckets
+        daily_data = {}
+        for i in range(days):
+            date = (start_date + timedelta(days=i+1)).strftime("%Y-%m-%d")
+            daily_data[date] = {"date": date, "created": 0, "completed": 0, "ai_actions": 0}
+        
+        # Get all tasks
+        all_tasks = await db.tasks.find({
+            "session_id": session_id,
+            "created_at": {"$gte": start_date.isoformat()}
+        }).to_list(1000)
+        
+        # Aggregate by date
+        for task in all_tasks:
+            created_at = task.get("created_at", "")[:10]
+            if created_at in daily_data:
+                daily_data[created_at]["created"] += 1
+                if task.get("completed", False):
+                    daily_data[created_at]["completed"] += 1
+        
+        # Get decisions
+        decisions = await db.decisions.find({
+            "session_id": session_id,
+            "timestamp": {"$gte": start_date.isoformat()}
+        }).to_list(1000)
+        
+        for d in decisions:
+            timestamp = d.get("timestamp", "")[:10]
+            if timestamp in daily_data:
+                daily_data[timestamp]["ai_actions"] += 1
+        
+        # Sort by date
+        result = sorted(daily_data.values(), key=lambda x: x["date"])
+        
+        return {"daily": result}
+    except Exception as e:
+        logger.error(f"Analytics trends error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/analytics/distributions")
+async def get_analytics_distributions(session_id: str, days: int = 7):
+    """Get distribution data for pie/bar charts."""
+    try:
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=days)
+        start_iso = start_date.isoformat()
+        
+        # Priority distribution
+        all_tasks = await db.tasks.find({
+            "session_id": session_id,
+            "created_at": {"$gte": start_iso}
+        }).to_list(1000)
+        
+        priority_counts = {"urgent": 0, "high": 0, "medium": 0, "low": 0}
+        for task in all_tasks:
+            priority = task.get("priority", "medium")
+            if priority in priority_counts:
+                priority_counts[priority] += 1
+        
+        # AI action type distribution
+        decisions = await db.decisions.find({
+            "session_id": session_id,
+            "timestamp": {"$gte": start_iso}
+        }).to_list(1000)
+        
+        action_counts = {"create_event": 0, "move_event": 0, "move_event_manual": 0, "error": 0}
+        for d in decisions:
+            action_type = d.get("action_type", "error")
+            if action_type in action_counts:
+                action_counts[action_type] += 1
+        
+        # Peak hours (when tasks were created)
+        hour_counts = {h: 0 for h in range(24)}
+        for task in all_tasks:
+            created_at = task.get("created_at", "")
+            if "T" in created_at:
+                try:
+                    hour = int(created_at.split("T")[1][:2])
+                    hour_counts[hour] += 1
+                except:
+                    pass
+        
+        # Get top 5 active hours
+        peak_hours = sorted(
+            [{"hour": h, "count": c} for h, c in hour_counts.items() if c > 0],
+            key=lambda x: x["count"],
+            reverse=True
+        )[:5]
+        
+        return {
+            "priority": priority_counts,
+            "action_types": action_counts,
+            "peak_hours": peak_hours
+        }
+    except Exception as e:
+        logger.error(f"Analytics distributions error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
