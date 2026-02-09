@@ -1,7 +1,8 @@
 import os
 import json
 from datetime import datetime, timezone
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import logging
 from task_classifier import classify_task, get_time_constraint_text, enrich_tasks_for_ai
 from schedule_validator import validate_schedule, format_validation_report
@@ -119,17 +120,7 @@ async def run_planner(calendar_events, tasks, target_date, day_start_hour=0, day
         user_preferences_text: Optional user preferences string for AI
     """
     api_key = os.environ.get('GEMINI_API_KEY')
-    genai.configure(api_key=api_key)
-    
-    # Build system prompt with user's preferred hours
-    system_prompt = build_system_prompt(day_start_hour, day_end_hour)
-    
-    # Add user preferences to system prompt if provided
-    if user_preferences_text:
-        system_prompt += f"\n\n{user_preferences_text}"
-    
-    # Using Gemini 2.5 Flash model with enhanced instructions
-    model = genai.GenerativeModel("gemini-2.5-flash", system_instruction=system_prompt)
+    client = genai.Client(api_key=api_key)
 
     date_str = target_date.strftime("%Y-%m-%d") if hasattr(target_date, 'strftime') else str(target_date)[:10]
 
@@ -189,9 +180,22 @@ Analyze and optimize. Return valid JSON only."""
             for t in enriched_tasks:
                 logfile.write(f"  - {t['title']}: {t.get('classification', {})}\n")
         
+        # Build system prompt with user's preferred hours
+        system_prompt = build_system_prompt(day_start_hour, day_end_hour)
+        
+        # Add user preferences to system prompt if provided
+        if user_preferences_text:
+            system_prompt += f"\n\n{user_preferences_text}"
+
         # Generate content
-        logger.info(f"Generating schedule with model {model.model_name}")
-        response = model.generate_content(prompt)
+        logger.info(f"Generating schedule with model gemini-2.0-flash")
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt
+            )
+        )
         text = response.text.strip()
         logger.info(f"AI Response received, length: {len(text)}")
         
@@ -239,7 +243,13 @@ Original request:
 
 Return corrected JSON only."""
             
-            retry_response = model.generate_content(retry_prompt)
+            retry_response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=retry_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt
+                )
+            )
             retry_text = retry_response.text.strip()
             
             # Log retry
