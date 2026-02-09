@@ -106,15 +106,27 @@ def build_system_prompt(day_start_hour=0, day_end_hour=24):
 If schedule is already optimal: {{"actions": [], "summary": "Your schedule is already optimized."}}"""
 
 
-async def run_planner(calendar_events, tasks, target_date, day_start_hour=0, day_end_hour=24):
+async def run_planner(calendar_events, tasks, target_date, day_start_hour=0, day_end_hour=24, user_preferences_text=""):
     """
-    Main planner function with semantic understanding.
+    Main planner function with semantic understanding and user preferences.
+    
+    Args:
+        calendar_events: Google Calendar events
+        tasks: Tasks to schedule
+        target_date: Target date for planning
+        day_start_hour: User's day start hour (0-23)
+        day_end_hour: User's day end hour (0-24)
+        user_preferences_text: Optional user preferences string for AI
     """
     api_key = os.environ.get('GEMINI_API_KEY')
     genai.configure(api_key=api_key)
     
     # Build system prompt with user's preferred hours
     system_prompt = build_system_prompt(day_start_hour, day_end_hour)
+    
+    # Add user preferences to system prompt if provided
+    if user_preferences_text:
+        system_prompt += f"\n\n{user_preferences_text}"
     
     # Using Gemini 2.5 Flash model with enhanced instructions
     model = genai.GenerativeModel("gemini-2.5-flash", system_instruction=system_prompt)

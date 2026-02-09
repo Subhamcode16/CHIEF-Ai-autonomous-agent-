@@ -13,6 +13,14 @@ import ScrollDivider from "@/components/ScrollDivider";
 import AnalyticsSection from "@/components/AnalyticsSection";
 import OnboardingTooltip from "@/components/OnboardingTooltip";
 import PreferencesModal from "@/components/PreferencesModal";
+import AutonomousBanner from "@/components/AutonomousBanner";
+import AgentStatusIndicator from "@/components/AgentStatusIndicator";
+import AutonomyToggle from "@/components/AutonomyToggle";
+import TaskFeedbackToast from "@/components/TaskFeedbackToast";
+import RescheduleToast from "@/components/RescheduleToast";
+import UserPreferencesInput from "@/components/UserPreferencesInput";
+import PreferencesDisplay from "@/components/PreferencesDisplay";
+import EmptyState from "@/components/EmptyState";
 import { BrainCircuit, Loader2, Calendar, CalendarDays, RotateCcw, Settings } from "lucide-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -35,6 +43,17 @@ export default function Dashboard() {
   const [onboardingStep, setOnboardingStep] = useState(null);
   const [preferences, setPreferences] = useState({ day_start_hour: 0, day_end_hour: 24 });
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+
+  // Autonomous mode state
+  const [autonomousMode, setAutonomousMode] = useState(false);
+  const [agentStatus, setAgentStatus] = useState("paused"); // "active", "planning", "monitoring", "paused"
+  const [showAutonomousBanner, setShowAutonomousBanner] = useState(false);
+  const [userPreferences, setUserPreferences] = useState("");
+  const [showPreferencesInput, setShowPreferencesInput] = useState(false);
+
+  // Toast states
+  const [taskFeedback, setTaskFeedback] = useState({ show: false, task: "", scheduledTime: "", reasoning: "" });
+  const [rescheduleNotification, setRescheduleNotification] = useState({ show: false, message: "", details: "" });
 
   useEffect(() => {
     const urlSession = searchParams.get("session_id");
@@ -157,11 +176,83 @@ export default function Dashboard() {
     }
   }, [sessionId, loading]);
 
+  // Continuous calendar sync - Always polls for Google Calendar updates
+  // Faster when autonomous mode is active, slower when manual mode
+  useEffect(() => {
+    if (!sessionId) return;
+
+    // Dynamic polling interval based on autonomous mode
+    const pollingInterval = autonomousMode ? 10000 : 30000; // 10s vs 30s
+
+    console.log(`[Calendar Sync] Starting continuous polling (interval: ${pollingInterval / 1000}s, autonomous: ${autonomousMode})`);
+
+    // Initial fetch on mount or mode change
+    fetchEvents();
+
+    // Set up interval for continuous polling
+    const interval = setInterval(() => {
+      console.log(`[Calendar Sync] Polling for updates (${autonomousMode ? 'Autonomous ON' : 'Manual mode'})...`);
+      fetchEvents();
+
+      // Also refresh decisions when autonomous mode is active
+      if (autonomousMode) {
+        fetchDecisions();
+      }
+    }, pollingInterval);
+
+    return () => {
+      console.log('[Calendar Sync] Stopping polling');
+      clearInterval(interval);
+    };
+  }, [sessionId, autonomousMode, fetchEvents, fetchDecisions]);
+
   const addTask = async (title, priority) => {
     try {
-      await axios.post(`${API}/tasks`, { session_id: sessionId, title, priority });
+      const response = await axios.post(`${API}/tasks`, {
+        session_id: sessionId,
+        title,
+        priority,
+        target_date: selectedDate  // Pass selected date to ensure task is for correct day
+      });
       fetchTasks();
-      toast.success("Task added");
+
+      // If autonomous mode is active, show feedback about automatic scheduling
+      if (autonomousMode) {
+        setAgentStatus("planning");
+        toast.info("Chief is adjusting your schedule...");
+
+        // If backend triggered auto-replanning, wait and refresh events
+        if (response.data.auto_plan_triggered) {
+          console.log('[Autonomous Mode] Auto-replan triggered, will refresh events in 5s');
+
+          // Wait for backend to complete auto-replanning, then refresh
+          setTimeout(async () => {
+            console.log('[Autonomous Mode] Refreshing events after auto-replan...');
+            await Promise.all([fetchEvents(), fetchDecisions()]);
+            setAgentStatus("active");
+
+            // Force another refresh after 2 seconds to ensure events appear
+            setTimeout(() => {
+              console.log('[Autonomous Mode] Second refresh to ensure sync...');
+              fetchEvents();
+            }, 2000);
+          }, 5000); // 5 second delay for backend processing (increased from 2.5s)
+        } else {
+          setAgentStatus("active");
+        }
+
+        // Show task feedback toast
+        setTimeout(() => {
+          setTaskFeedback({
+            show: true,
+            task: title,
+            scheduledTime: "3:00 - 4:00 PM",
+            reasoning: response.data.auto_plan_reason || "Deadline proximity and available focus time."
+          });
+        }, 1500);
+      } else {
+        toast.success("Task added");
+      }
     } catch { toast.error("Failed to add task"); }
   };
 
@@ -183,14 +274,22 @@ export default function Dashboard() {
   const planDay = async () => {
     if (tasks.length === 0) { toast.error("Add some tasks first"); return; }
     setPlanning(true);
+    setAgentStatus("planning");
     try {
       const { data } = await axios.post(`${API}/plan`, { session_id: sessionId, date: selectedDate });
       toast.success(`Chief made ${data.actions_count} change(s)`);
       setActiveTab("log");
+
+      // Activate autonomous mode
+      setAutonomousMode(true);
+      setAgentStatus("active");
+      setShowAutonomousBanner(true);
+
       await Promise.all([fetchEvents(), fetchTasks(), fetchDecisions()]);
     } catch (e) {
       toast.error("Planning failed. Please try again.");
       console.error("Plan error:", e);
+      setAgentStatus("paused");
     } finally { setPlanning(false); }
   };
 
@@ -354,7 +453,13 @@ export default function Dashboard() {
         onDateChange={setSelectedDate}
         onRefresh={fetchEvents}
         onDisconnect={disconnect}
-      />
+      >
+        {/* Add Agent Status Indicator to Header */}
+        <AgentStatusIndicator
+          status={agentStatus}
+          onClick={() => setShowPreferencesInput(!showPreferencesInput)}
+        />
+      </Header>
 
       <main className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-5 p-5 md:p-8">
         {/* Calendar panel */}
@@ -411,33 +516,40 @@ export default function Dashboard() {
 
         {/* Sidebar */}
         <div className="md:col-span-5 flex flex-col gap-5">
-          {/* Plan button */}
-          <div className="flex gap-3 animate-glass-in stagger-1">
-            <button
-              onClick={planDay}
-              disabled={planning || tasks.length === 0}
-              className="group flex-1 flex items-center gap-2 px-5 py-3.5 rounded-xl glass-1 glass-highlight glass-hover
-                          disabled:opacity-40 disabled:cursor-not-allowed disabled:saturate-50
-                          border border-white/[0.08] shadow-md transition-all duration-300
-                          hover:scale-[1.02] hover:border-blue-400/30"
-              data-testid="plan-button"
-            >
-              <BrainCircuit className={`w-4 h-4 ${planning ? "animate-pulse" : "group-hover:scale-110"} transition-all text-blue-400`} />
-              <span className="font-heading font-semibold text-[13px] text-[var(--text-primary)] tracking-tight">
-                {planning ? "Planning..." : "Let Chief Plan My Day"}
-              </span>
-            </button>
+          {/* Plan button with microcopy */}
+          <div className="space-y-2 animate-glass-in stagger-1">
+            <div className="flex gap-3">
+              <button
+                onClick={planDay}
+                disabled={planning || tasks.length === 0}
+                className="group flex-1 flex items-center gap-2 px-5 py-3.5 rounded-xl glass-1 glass-highlight glass-hover
+                            disabled:opacity-40 disabled:cursor-not-allowed disabled:saturate-50
+                            border border-white/[0.08] shadow-md transition-all duration-300
+                            hover:scale-[1.02] hover:border-blue-400/30"
+                data-testid="plan-button"
+              >
+                <BrainCircuit className={`w-4 h-4 ${planning ? "animate-pulse" : "group-hover:scale-110"} transition-all text-blue-400`} />
+                <span className="font-heading font-semibold text-[13px] text-[var(--text-primary)] tracking-tight">
+                  {planning ? "Planning..." : "Let Chief Plan My Day"}
+                </span>
+              </button>
 
-            {/* Schedule Preferences Button */}
-            <button
-              onClick={() => setShowPreferencesModal(true)}
-              className="group flex items-center gap-2 px-4 py-3.5 rounded-xl glass-1 glass-highlight glass-hover
-                          border border-white/[0.08] shadow-md transition-all duration-300
-                          hover:scale-[1.02] hover:border-purple-400/30"
-              title="Schedule Preferences"
-            >
-              <Settings className="w-4 h-4 group-hover:rotate-90 transition-all text-purple-400" />
-            </button>
+              {/* Schedule Preferences Button */}
+              <button
+                onClick={() => setShowPreferencesModal(true)}
+                className="group flex items-center gap-2 px-4 py-3.5 rounded-xl glass-1 glass-highlight glass-hover
+                            border border-white/[0.08] shadow-md transition-all duration-300
+                            hover:scale-[1.02] hover:border-purple-400/30"
+                title="Schedule Preferences"
+              >
+                <Settings className="w-4 h-4 group-hover:rotate-90 transition-all text-purple-400" />
+              </button>
+            </div>
+            {!autonomousMode && (
+              <p className="text-xs text-[var(--text-muted)] text-center leading-relaxed px-2">
+                You're delegating control. Chief will manage your schedule until paused.
+              </p>
+            )}
           </div>
 
           {/* Reset to AI Plan button */}
@@ -477,6 +589,35 @@ export default function Dashboard() {
             <RotateCcw className="h-4 w-4" />
             Reset to AI Schedule
           </button>
+
+          {/* User Preferences Input */}
+          {showPreferencesInput && (
+            <div className="glass-2 glass-highlight rounded-xl p-4 animate-glass-in stagger-1">
+              <UserPreferencesInput
+                preferences={userPreferences}
+                onSave={async (prefs) => {
+                  setUserPreferences(prefs);
+                  setShowPreferencesInput(false);
+                  toast.success("Preferences saved");
+                }}
+                onClose={() => setShowPreferencesInput(false)}
+              />
+            </div>
+          )}
+
+          {/* Autonomy Toggle */}
+          {autonomousMode && (
+            <div className="glass-2 glass-highlight rounded-xl p-4 animate-glass-in stagger-1">
+              <AutonomyToggle
+                enabled={autonomousMode}
+                onChange={(enabled) => {
+                  setAutonomousMode(enabled);
+                  setAgentStatus(enabled ? "active" : "paused");
+                  toast.info(enabled ? "Autonomous mode activated" : "Autonomous mode paused");
+                }}
+              />
+            </div>
+          )}
 
           {/* Tabs panel */}
           <div
@@ -534,6 +675,31 @@ export default function Dashboard() {
         onClose={() => setShowPreferencesModal(false)}
         preferences={preferences}
         onSave={savePreferences}
+      />
+
+      {/* Autonomous Mode Banner */}
+      <AutonomousBanner
+        show={showAutonomousBanner}
+        onDismiss={() => setShowAutonomousBanner(false)}
+      />
+
+      {/* Task Feedback Toast */}
+      <TaskFeedbackToast
+        show={taskFeedback.show}
+        task={taskFeedback.task}
+        scheduledTime={taskFeedback.scheduledTime}
+        reasoning={taskFeedback.reasoning}
+        onViewDecision={() => setActiveTab("log")}
+        onDismiss={() => setTaskFeedback({ ...taskFeedback, show: false })}
+      />
+
+      {/* Reschedule Toast */}
+      <RescheduleToast
+        show={rescheduleNotification.show}
+        message={rescheduleNotification.message}
+        details={rescheduleNotification.details}
+        onViewDecision={() => setActiveTab("log")}
+        onDismiss={() => setRescheduleNotification({ ...rescheduleNotification, show: false })}
       />
     </div>
   );

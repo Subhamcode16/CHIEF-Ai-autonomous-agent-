@@ -1,0 +1,73 @@
+xDeployment Guide: Chief AI Agent
+This guide covers deploying your full-stack application.
+
+Recommended Architecture:
+
+Frontend: Vercel (Best for React/Static sites)
+Backend: Render (Best for Python/FastAPI with background tasks/long interactions)
+Part 1: Backend Deployment (Render)
+Deploy the backend first so you have the API URL for the frontend.
+
+Push Code to GitHub
+
+Ensure your project is pushed to a GitHub repository.
+Create Service on Render
+
+Go to Render Dashboard.
+Click New + -> Web Service.
+Connect your GitHub repository.
+Configure Settings
+
+Name: chief-backend (or similar)
+Root Directory: backend (Important! This tells Render where the python code is)
+Runtime: Python 3
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn server:app --host 0.0.0.0 --port $PORT
+Environment Variables Add these in the "Environment" tab:
+
+PYTHON_VERSION: 3.11.0 (or your local version)
+MONGO_URL: Your MongoDB Atlas connection string (e.g., mongodb+srv://...)
+DB_NAME: chief_db
+GEMINI_API_KEY: Your Google AI Studio key
+GOOGLE_CLIENT_ID: OAuth ID
+GOOGLE_CLIENT_SECRET: OAuth Secret
+GOOGLE_REDIRECT_URI: Update this later to your Vercel URL + /api/auth/callback (or similar)
+FRONTEND_URL: https://your-vercel-app.vercel.app (Add this after deploying frontend, simpler to allow * initially for testing or deploy frontend first with placeholder)
+Deploy
+
+Click Create Web Service.
+Wait for build. Copy the Service URL (e.g., https://chief-backend.onrender.com).
+Part 2: Frontend Deployment (Vercel)
+Import Project in Vercel
+
+Go to Vercel Dashboard.
+Click Add New... -> Project.
+Import the same GitHub repository.
+Configure Project
+
+Framework Preset: Create React App (should detect automatically).
+Root Directory: Click "Edit" and select frontend.
+Environment Variables Add these variables:
+
+REACT_APP_BACKEND_URL: The URL from Part 1 (e.g., https://chief-backend.onrender.com).
+Note: Do NOT add a trailing slash /.
+Deploy
+
+Click Deploy.
+Vercel will build and assign a domain (e.g., chief-agent.vercel.app).
+Part 3: Final Configuration
+Update Backend CORS
+
+Go back to Render -> Environment Variables.
+Set FRONTEND_URL to your new Vercel domain (e.g., https://chief-agent.vercel.app).
+This ensures only your app can talk to your API.
+Update Google OAuth
+
+Go to Google Cloud Console (APIs & Services -> Credentials).
+Add your Vercel domain to Authorized JavaScript origins.
+Add https://chief-backend.onrender.com/api/auth/google/callback (or your strict redirect URI) to Authorized redirect URIs.
+Test
+
+Open your Vercel app URL.
+It should connect to the Render backend and work autonomously!
+

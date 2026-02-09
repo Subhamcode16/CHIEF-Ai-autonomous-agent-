@@ -21,12 +21,21 @@ from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, Field, field_validator
 import re
 
+# Autonomous mode imports
+from autonomous_state import init_autonomous_state
+from user_preferences import save_user_preferences, get_user_preferences, get_preferences_for_planning
+from auto_replanner import trigger_auto_replan
+from conflict_resolver import detect_conflicts
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 mongo_url = os.environ['MONGO_URL']
 mongo_client = AsyncIOMotorClient(mongo_url)
 db = mongo_client[os.environ['DB_NAME']]
+
+# Initialize autonomous mode state manager
+autonomous_state = init_autonomous_state(db)
 
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
@@ -58,16 +67,32 @@ class TaskCreate(BaseModel):
     session_id: str
     title: str = Field(..., min_length=1, max_length=200, description="Task title")
     priority: str = "medium"
+    target_date: Optional[str] = None
 
     @field_validator('title')
+    @classmethod
     def sanitize_title(cls, v):
         return v.strip()
 
     @field_validator('priority')
+    @classmethod
     def validate_priority(cls, v):
         if v not in ['low', 'medium', 'high', 'urgent']:
             raise ValueError('Priority must be low, medium, high, or urgent')
         return v
+    
+    @field_validator('target_date')
+    @classmethod
+    def validate_target_date(cls, v):
+        if v is None:
+            # Default to current date if not provided
+            return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        try:
+            # Validate date format
+            datetime.strptime(v, "%Y-%m-%d")
+            return v
+        except ValueError:
+            raise ValueError("target_date must be in YYYY-MM-DD format")
 
 
 class PlanRequest(BaseModel):
@@ -289,6 +314,121 @@ async def update_preferences(session_id: str, day_start_hour: int, day_end_hour:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== AUTONOMOUS MODE ENDPOINTS ====================
+
+@api_router.post("/autonomous/activate")
+async def activate_autonomous_mode(session_id: str):
+    """Activate autonomous mode for a session."""
+    try:
+        result = await autonomous_state.activate(session_id)
+        logger.info(f"Autonomous mode activated for {session_id}")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Activate autonomous mode error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/autonomous/deactivate")
+async def deactivate_autonomous_mode(session_id: str):
+    """Deactivate/pause autonomous mode for a session."""
+    try:
+        result = await autonomous_state.deactivate(session_id)
+        logger.info(f"Autonomous mode deactivated for {session_id}")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Deactivate autonomous mode error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/autonomous/status")
+async def get_autonomous_status(session_id: str):
+    """Get current autonomous mode status."""
+    try:
+        status = await autonomous_state.get_status(session_id)
+        return status
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Get autonomous status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/autonomous/status")
+async def update_autonomous_status(session_id: str, status: str):
+    """Update autonomous mode status (active, planning, monitoring, paused)."""
+    try:
+        result = await autonomous_state.update_status(session_id, status)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Update autonomous status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class UserPreferencesRequest(BaseModel):
+    session_id: str
+    preferences_text: str = Field(..., max_length=2000, description="Natural language preferences")
+
+
+@api_router.post("/user-preferences/save")
+async def save_preferences(data: UserPreferencesRequest):
+    """Save user scheduling preferences."""
+    try:
+        result = await save_user_preferences(db, data.session_id, data.preferences_text)
+        logger.info(f"Saved preferences for {data.session_id}")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Save preferences error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/user-preferences/get")
+async def get_user_prefs(session_id: str):
+    """Get user scheduling preferences."""
+    try:
+        prefs = await get_user_preferences(db, session_id)
+        return prefs
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Get user preferences error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/conflicts/detect")
+async def detect_schedule_conflicts(session_id: str, date: str = None):
+    """Detect conflicts in the schedule."""
+    try:
+        service = await get_google_service(session_id)
+        time_min, time_max = get_day_range(date)
+        
+        result = service.events().list(
+            calendarId='primary',
+            timeMin=time_min,
+            timeMax=time_max,
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+        
+        events = result.get('items', [])
+        conflicts = detect_conflicts(events)
+        
+        return {
+            "conflicts_count": len(conflicts),
+            "conflicts": conflicts
+        }
+    except Exception as e:
+        logger.error(f"Detect conflicts error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.delete("/auth/session/{session_id}")
 async def delete_session(session_id: str):
     await db.sessions.delete_one({"session_id": session_id})
@@ -465,11 +605,46 @@ async def create_task(data: TaskCreate):
         "session_id": data.session_id,
         "title": data.title,
         "priority": data.priority,
+        "target_date": data.target_date,  # Store target date
         "completed": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.tasks.insert_one(task)
     task.pop('_id', None)
+    
+    # Check if autonomous mode is active
+    is_autonomous = await autonomous_state.is_active(data.session_id)
+    
+    if is_autonomous:
+        try:
+            # Update status to 'planning'
+            await autonomous_state.update_status(data.session_id, 'planning')
+            logger.info(f"Auto-replanning triggered by new task: {data.title} for date: {data.target_date}")
+            
+            # Get Google Calendar service
+            service = await get_google_service(data.session_id)
+            
+            # Trigger auto-replan (asynchronous, don't wait for completion)
+            # Pass the task's target_date to ensure planning for correct day
+            import asyncio
+            asyncio.create_task(
+                trigger_auto_replan(
+                    db,
+                    service,
+                    data.session_id,
+                    f"New task added: {data.title}",
+                    data.target_date  # Use task's target date instead of None
+                )
+            )
+            
+            # Mark in response that auto-planning was triggered
+            task['auto_plan_triggered'] = True
+            task['auto_plan_reason'] = f"New {data.priority} priority task added for {data.target_date}"
+            
+        except Exception as e:
+            logger.error(f"Auto-replan trigger failed: {e}")
+            task['auto_plan_triggered'] = False
+    
     return task
 
 
@@ -525,11 +700,18 @@ async def plan_day(req: PlanRequest):
     ).execute()
     raw_events = result.get('items', [])
 
+    # Fetch tasks ONLY for the target date to avoid duplicates
+    target_date = req.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     tasks = await db.tasks.find(
-        {"session_id": req.session_id, "completed": False}, {"_id": 0}
+        {
+            "session_id": req.session_id, 
+            "completed": False,
+            "target_date": target_date  # Filter by target date
+        }, 
+        {"_id": 0}
     ).to_list(100)
 
-    print(f"DEBUG: Planning for {len(tasks)} tasks")
+    print(f"DEBUG: Planning for {len(tasks)} tasks on {target_date}")
     for t in tasks:
         print(f" - {t.get('title')} ({t.get('priority')})")
 
@@ -539,9 +721,14 @@ async def plan_day(req: PlanRequest):
     day_start_hour = prefs.get("day_start_hour", 0)
     day_end_hour = prefs.get("day_end_hour", 24)
     logger.info(f"Using schedule preferences: {day_start_hour}:00 - {day_end_hour}:00")
+    
+    # Get user preferences text for AI planning
+    user_prefs_text = await get_preferences_for_planning(db, req.session_id)
+    if user_prefs_text:
+        logger.info(f"Using user preferences in planning")
 
     target = datetime.strptime(req.date, "%Y-%m-%d") if req.date else datetime.now(timezone.utc)
-    plan = await run_planner(raw_events, tasks, target, day_start_hour, day_end_hour)
+    plan = await run_planner(raw_events, tasks, target, day_start_hour, day_end_hour, user_prefs_text)
     print(f"DEBUG: Planner returned {len(plan.get('actions', []))} actions")
 
     decisions = []
@@ -603,6 +790,14 @@ async def plan_day(req: PlanRequest):
 
     # NOTE: Tasks are NO LONGER auto-completed after planning
     # Users must manually mark them complete via the UI
+    
+    # Activate autonomous mode after successful planning
+    if len(decisions) > 0:
+        try:
+            await autonomous_state.activate(req.session_id)
+            logger.info(f"Autonomous mode activated after successful planning")
+        except Exception as e:
+            logger.error(f"Failed to activate autonomous mode: {e}")
     
     clean = [{k: v for k, v in d.items() if k != '_id'} for d in decisions]
     return {"summary": plan.get('summary', ''), "decisions": clean, "actions_count": len(clean)}

@@ -1,7 +1,7 @@
 import { RefreshCw, LogOut, Calendar } from "lucide-react";
 import ChiefLogo from "@/components/ChiefLogo";
 
-export default function Header({ session, selectedDate, onDateChange, onRefresh, onDisconnect }) {
+export default function Header({ session, selectedDate, onDateChange, onRefresh, onDisconnect, children }) {
   return (
     <header className="sticky top-0 z-50 glass-3 border-b border-white/[0.05]" data-testid="header">
       <div className="max-w-7xl mx-auto flex items-center justify-between h-14 px-5 md:px-8">
@@ -26,7 +26,8 @@ export default function Header({ session, selectedDate, onDateChange, onRefresh,
         </div>
 
         {/* User + Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">\n          {/* Render children (status indicator) */}
+          {children}
           {session && (
             <div className="hidden md:flex items-center gap-2 mr-1">
               {session.picture && (
