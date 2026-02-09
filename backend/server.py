@@ -1039,7 +1039,7 @@ app.add_middleware(
 
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def health_check():
     return {"message": "Chief Agent Backend Running", "status": "ok"}
 
