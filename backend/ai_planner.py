@@ -109,7 +109,17 @@ If schedule is already optimal: {{"actions": [], "summary": "Your schedule is al
 
 
 # List of models to try in order of preference
-MODEL_PRIORITY = ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"]
+MODEL_PRIORITY = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
+
+def list_available_models(client):
+    try:
+        print("DEBUG: Listing available models...")
+        models = client.models.list()
+        print("DEBUG: Available models:")
+        for m in models:
+            print(f" - {m.name}")
+    except Exception as e:
+        print(f"DEBUG: Failed to list models: {e}")
 
 def generate_with_fallback(client, prompt, system_prompt):
     """
@@ -151,6 +161,7 @@ def generate_with_fallback(client, prompt, system_prompt):
     
     # If we run out of models
     print("CRITICAL ERROR: All models failed.")
+    list_available_models(client)
     raise last_error
 
 async def run_planner(calendar_events, tasks, target_date, day_start_hour=0, day_end_hour=24, user_preferences_text=""):
