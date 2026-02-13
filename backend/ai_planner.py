@@ -135,9 +135,12 @@ def generate_with_fallback(client, prompt, system_prompt):
             
         except Exception as e:
             error_str = str(e)
-            # Check for rate limit (429) or service unavailable (503)
-            if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "503" in error_str:
-                print(f"WARNING: Model {model} failed with quota/service error. Trying next...")
+            # Check for:
+            # - 429: Rate limit / Resource exhausted
+            # - 503: Service unavailable
+            # - 404: Model not found (e.g. deprecated or region-locked)
+            if any(code in error_str for code in ["429", "RESOURCE_EXHAUSTED", "503", "404", "NOT_FOUND"]):
+                print(f"WARNING: Model {model} failed with retriable error ({error_str[:50]})... Trying next...")
                 logger.warning(f"Model {model} failed: {e}")
                 last_error = e
                 continue # Try next model
