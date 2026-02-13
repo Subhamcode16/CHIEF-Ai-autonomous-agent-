@@ -728,7 +728,9 @@ async def plan_day(req: PlanRequest):
         logger.info(f"Using user preferences in planning")
 
     target = datetime.strptime(req.date, "%Y-%m-%d") if req.date else datetime.now(timezone.utc)
+    print(f"DEBUG: Calling run_planner with {len(raw_events)} events and {len(tasks)} tasks")
     plan = await run_planner(raw_events, tasks, target, day_start_hour, day_end_hour, user_prefs_text)
+    print(f"DEBUG: Planner returned plan summary: {plan.get('summary')}")
     print(f"DEBUG: Planner returned {len(plan.get('actions', []))} actions")
 
     decisions = []

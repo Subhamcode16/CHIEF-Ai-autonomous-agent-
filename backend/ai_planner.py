@@ -120,7 +120,16 @@ async def run_planner(calendar_events, tasks, target_date, day_start_hour=0, day
         user_preferences_text: Optional user preferences string for AI
     """
     api_key = os.environ.get('GEMINI_API_KEY')
-    client = genai.Client(api_key=api_key)
+    if not api_key:
+        print("CRITICAL ERROR: GEMINI_API_KEY is missing from environment variables!")
+        return {"actions": [], "summary": "Error: GEMINI_API_KEY is missing."}
+    
+    print(f"DEBUG: Found GEMINI_API_KEY: {api_key[:4]}...{api_key[-4:]}")
+    try:
+        client = genai.Client(api_key=api_key)
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to initialize Gemini Client: {e}")
+        return {"actions": [], "summary": f"Error initializing AI: {str(e)}"}
 
     date_str = target_date.strftime("%Y-%m-%d") if hasattr(target_date, 'strftime') else str(target_date)[:10]
 
@@ -196,6 +205,7 @@ Analyze and optimize. Return valid JSON only."""
                 system_instruction=system_prompt
             )
         )
+        print("DEBUG: Gemini API call successful.")
         text = response.text.strip()
         logger.info(f"AI Response received, length: {len(text)}")
         
@@ -285,12 +295,16 @@ Return corrected JSON only."""
         
     except json.JSONDecodeError as e:
         logger.error(f"JSON parse error: {e}")
+        print(f"CRITICAL ERROR: JSON Parsing failed. Raw AI response: {text}")
         with open("planner_debug.log", "a") as logfile:
             logfile.write(f"JSON PARSE ERROR: {e}\nRaw text: {text[:500]}\n")
         return {"actions": [], "summary": f"Planning error: Could not parse AI response"}
         
     except Exception as e:
         logger.error(f"Planner error: {e}")
+        print(f"CRITICAL ERROR: General Planner Exception: {e}")
+        import traceback
+        traceback.print_exc()
         with open("planner_debug.log", "a") as logfile:
             logfile.write(f"EXCEPTION: {e}\n")
         return {"actions": [], "summary": f"Planning error: {str(e)}"}
