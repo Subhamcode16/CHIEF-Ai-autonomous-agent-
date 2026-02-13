@@ -684,122 +684,134 @@ async def update_task(task_id: str, session_id: str, data: TaskUpdate):
 @api_router.post("/plan")
 async def plan_day(req: PlanRequest):
     from ai_planner import run_planner
-
     print(f"DEBUG: Plan request session_id: {req.session_id}")
-    session = await db.sessions.find_one({"session_id": req.session_id})
-    if not session:
-        print(f"DEBUG: Session not found for {req.session_id}")
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    service = await get_google_service(req.session_id)
-    time_min, time_max = get_day_range(req.date)
-
-    result = service.events().list(
-        calendarId='primary', timeMin=time_min, timeMax=time_max,
-        singleEvents=True, orderBy='startTime'
-    ).execute()
-    raw_events = result.get('items', [])
-
-    # Fetch tasks ONLY for the target date to avoid duplicates
-    target_date = req.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    tasks = await db.tasks.find(
-        {
-            "session_id": req.session_id, 
-            "completed": False,
-            "target_date": target_date  # Filter by target date
-        }, 
-        {"_id": 0}
-    ).to_list(100)
-
-    print(f"DEBUG: Planning for {len(tasks)} tasks on {target_date}")
-    for t in tasks:
-        print(f" - {t.get('title')} ({t.get('priority')})")
-
-    # Fetch user preferences for day schedule
-    session = await db.sessions.find_one({"session_id": req.session_id})
-    prefs = session.get("preferences", {}) if session else {}
-    day_start_hour = prefs.get("day_start_hour", 0)
-    day_end_hour = prefs.get("day_end_hour", 24)
-    logger.info(f"Using schedule preferences: {day_start_hour}:00 - {day_end_hour}:00")
     
-    # Get user preferences text for AI planning
-    user_prefs_text = await get_preferences_for_planning(db, req.session_id)
-    if user_prefs_text:
-        logger.info(f"Using user preferences in planning")
+    try:
+        session = await db.sessions.find_one({"session_id": req.session_id})
+        if not session:
+            print(f"DEBUG: Session not found for {req.session_id}")
+            raise HTTPException(status_code=404, detail="Session not found")
 
-    target = datetime.strptime(req.date, "%Y-%m-%d") if req.date else datetime.now(timezone.utc)
-    print(f"DEBUG: Calling run_planner with {len(raw_events)} events and {len(tasks)} tasks")
-    plan = await run_planner(raw_events, tasks, target, day_start_hour, day_end_hour, user_prefs_text)
-    print(f"DEBUG: Planner returned plan summary: {plan.get('summary')}")
-    print(f"DEBUG: Planner returned {len(plan.get('actions', []))} actions")
+        service = await get_google_service(req.session_id)
+        time_min, time_max = get_day_range(req.date)
 
-    decisions = []
-    for action in plan.get('actions', []):
-        decision = {
-            "id": str(uuid.uuid4()),
-            "session_id": req.session_id,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-        try:
-            if action['type'] == 'move_event':
-                service.events().patch(
-                    calendarId='primary', eventId=action['event_id'],
-                    body={
-                        'start': {'dateTime': action['new_start']},
-                        'end': {'dateTime': action['new_end']}
-                    }
-                ).execute()
+        print(f"DEBUG: Fetching calendar events for {time_min} to {time_max}")
+        result = service.events().list(
+            calendarId='primary', timeMin=time_min, timeMax=time_max,
+            singleEvents=True, orderBy='startTime'
+        ).execute()
+        raw_events = result.get('items', [])
+        print(f"DEBUG: Found {len(raw_events)} calendar events")
+
+        # Fetch tasks ONLY for the target date to avoid duplicates
+        target_date = req.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        tasks = await db.tasks.find(
+            {
+                "session_id": req.session_id, 
+                "completed": False,
+                "target_date": target_date  # Filter by target date
+            }, 
+            {"_id": 0}
+        ).to_list(100)
+
+        print(f"DEBUG: Planning for {len(tasks)} tasks on {target_date}")
+        for t in tasks:
+            print(f" - {t.get('title')} ({t.get('priority')})")
+
+        # Fetch user preferences for day schedule
+        session = await db.sessions.find_one({"session_id": req.session_id})
+        prefs = session.get("preferences", {}) if session else {}
+        day_start_hour = prefs.get("day_start_hour", 0)
+        day_end_hour = prefs.get("day_end_hour", 24)
+        logger.info(f"Using schedule preferences: {day_start_hour}:00 - {day_end_hour}:00")
+        
+        # Get user preferences text for AI planning
+        user_prefs_text = await get_preferences_for_planning(db, req.session_id)
+        if user_prefs_text:
+            logger.info(f"Using user preferences in planning")
+
+        target = datetime.strptime(req.date, "%Y-%m-%d") if req.date else datetime.now(timezone.utc)
+        print(f"DEBUG: Calling run_planner with {len(raw_events)} events and {len(tasks)} tasks")
+        plan = await run_planner(raw_events, tasks, target, day_start_hour, day_end_hour, user_prefs_text)
+        print(f"DEBUG: Planner returned plan summary: {plan.get('summary')}")
+        print(f"DEBUG: Planner returned {len(plan.get('actions', []))} actions")
+
+        decisions = []
+        for action in plan.get('actions', []):
+            decision = {
+                "id": str(uuid.uuid4()),
+                "session_id": req.session_id,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            try:
+                if action['type'] == 'move_event':
+                    service.events().patch(
+                        calendarId='primary', eventId=action['event_id'],
+                        body={
+                            'start': {'dateTime': action['new_start']},
+                            'end': {'dateTime': action['new_end']}
+                        }
+                    ).execute()
+                    decision.update({
+                        "action_type": "move_event",
+                        "event_id": action.get('event_id'),
+                        "event_title": action.get('event_title', ''),
+                        "description": f"Moved to {action.get('new_start', '')[11:16]}",
+                        "reason": action.get('reason', ''),
+                        "original_time": action.get('original_start', ''),
+                        "new_time": action.get('new_start', ''),
+                        "end_time": action.get('new_end', '')
+                    })
+                elif action['type'] == 'create_event':
+                    created_event = service.events().insert(
+                        calendarId='primary',
+                        body={
+                            'summary': action['title'],
+                            'start': {'dateTime': action['start']},
+                            'end': {'dateTime': action['end']},
+                            'description': f"Created by Chief: {action.get('reason', '')}"
+                        }
+                    ).execute()
+                    decision.update({
+                        "action_type": "create_event",
+                        "event_id": created_event.get('id'),
+                        "event_title": action.get('title', ''),
+                        "description": f"Scheduled at {action.get('start', '')[11:16]}",
+                        "reason": action.get('reason', ''),
+                        "new_time": action.get('start', ''),
+                        "end_time": action.get('end', '')
+                    })
+            except Exception as e:
+                logger.error(f"Action error: {e}")
                 decision.update({
-                    "action_type": "move_event",
-                    "event_id": action.get('event_id'),
-                    "event_title": action.get('event_title', ''),
-                    "description": f"Moved to {action.get('new_start', '')[11:16]}",
-                    "reason": action.get('reason', ''),
-                    "original_time": action.get('original_start', ''),
-                    "new_time": action.get('new_start', ''),
-                    "end_time": action.get('new_end', '')
+                    "action_type": "error",
+                    "event_title": action.get('event_title', action.get('title', '')),
+                    "description": str(e)[:200],
+                    "reason": action.get('reason', '')
                 })
-            elif action['type'] == 'create_event':
-                created_event = service.events().insert(
-                    calendarId='primary',
-                    body={
-                        'summary': action['title'],
-                        'start': {'dateTime': action['start']},
-                        'end': {'dateTime': action['end']},
-                        'description': f"Created by Chief: {action.get('reason', '')}"
-                    }
-                ).execute()
-                decision.update({
-                    "action_type": "create_event",
-                    "event_id": created_event.get('id'),
-                    "event_title": action.get('title', ''),
-                    "description": f"Scheduled at {action.get('start', '')[11:16]}",
-                    "reason": action.get('reason', ''),
-                    "new_time": action.get('start', ''),
-                    "end_time": action.get('end', '')
-                })
-        except Exception as e:
-            logger.error(f"Action error: {e}")
-            decision.update({
-                "action_type": "error",
-                "event_title": action.get('event_title', action.get('title', '')),
-                "description": str(e)[:200],
-                "reason": action.get('reason', '')
-            })
 
-        decisions.append(decision)
-        await db.decisions.insert_one({**decision})
+            decisions.append(decision)
+            await db.decisions.insert_one({**decision})
 
-    # NOTE: Tasks are NO LONGER auto-completed after planning
-    # Users must manually mark them complete via the UI
-    
-    # Activate autonomous mode after successful planning
-    if len(decisions) > 0:
-        try:
-            await autonomous_state.activate(req.session_id)
-            logger.info(f"Autonomous mode activated after successful planning")
-        except Exception as e:
-            logger.error(f"Failed to activate autonomous mode: {e}")
+        # NOTE: Tasks are NO LONGER auto-completed after planning
+        # Users must manually mark them complete via the UI
+        
+        # Activate autonomous mode after successful planning
+        if len(decisions) > 0:
+            try:
+                await autonomous_state.activate(req.session_id)
+                logger.info(f"Autonomous mode activated after successful planning")
+            except Exception as e:
+                logger.error(f"Failed to activate autonomous mode: {e}")
+        
+        return {"decisions": decisions, "plan_summary": plan.get('summary')}
+
+    except Exception as e:
+        import traceback
+        error_msg = f"CRITICAL PLANNER CRASH: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=f"Planner failed: {str(e)}")
     
     clean = [{k: v for k, v in d.items() if k != '_id'} for d in decisions]
     return {"summary": plan.get('summary', ''), "decisions": clean, "actions_count": len(clean)}
