@@ -3,7 +3,7 @@
     "buildCommand": "CI=false npm run build",
     "build": {
         "env": {
-            "REACT_APP_BACKEND_URL": "https://chief-ai-autonomous-agent.onrender.com"
+            "REACT_APP_BACKEND_URL": "https://chief-ai-autonomous-agent-1.onrender.com"
         }
     }
 }
