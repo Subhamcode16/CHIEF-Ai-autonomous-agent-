@@ -10,5 +10,5 @@ echo Starting Frontend Server...
 start "Chief Frontend" cmd /k "cd frontend && npm start"
 
 echo Servers started!
-echo Backend: http://localhost:8000
-echo Frontend: http://localhost:3000
+echo Backend: https://chief-ai-autonomous-agent-1.onrender.com
+echo Frontend: https://chief-frontend.vercel.app

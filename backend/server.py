@@ -195,7 +195,7 @@ async def google_login(request: Request):
 @api_router.get("/auth/google/callback")
 async def google_callback(code: str = None, error: str = None):
     if error or not code:
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://chief-frontend.vercel.app')
         return RedirectResponse(f"{frontend_url}/?error={error or 'no_code'}")
 
     token_resp = http_requests.post('https://oauth2.googleapis.com/token', data={
@@ -208,7 +208,7 @@ async def google_callback(code: str = None, error: str = None):
 
     if 'error' in token_resp:
         logger.error(f"Token error: {token_resp}")
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://chief-frontend.vercel.app')
         return RedirectResponse(f"{frontend_url}/?error=auth_failed")
 
     user_info = http_requests.get(
@@ -226,7 +226,7 @@ async def google_callback(code: str = None, error: str = None):
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://chief-frontend.vercel.app')
     return RedirectResponse(f"{frontend_url}/dashboard?session_id={session_id}")
 
 
@@ -1032,7 +1032,7 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[origin.strip() for origin in os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',') if origin.strip()],
+    allow_origins=[origin.strip() for origin in os.environ.get('CORS_ORIGINS', 'https://chief-frontend.vercel.app,http://localhost:3000').split(',') if origin.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )

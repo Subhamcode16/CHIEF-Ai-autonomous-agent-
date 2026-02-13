@@ -17,7 +17,7 @@ Before deploying, it's crucial to verify the application works locally.
 2.  **Verify Terminals:** Ensure two terminal windows open (one for Backend, one for Frontend) without errors.
 
 ### Backend Verification
-- **Health Check:** Open `http://localhost:8000/docs`. You should see the Swagger UI.
+- **Health Check:** Open `https://chief-ai-autonomous-agent-1.onrender.com/docs`. You should see the Swagger UI.
 - **Test Endpoint:** Try the `/` endpoint (GET). It should return `{"message": "Chief AI Agent Backend is running"}`.
 - **Database Connection:** Check the backend terminal logs. Look for: `connected to mongodb`.
 
