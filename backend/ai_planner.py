@@ -107,17 +107,52 @@ def build_system_prompt(day_start_hour=0, day_end_hour=24):
 If schedule is already optimal: {{"actions": [], "summary": "Your schedule is already optimized."}}"""
 
 
+
+# List of models to try in order of preference
+MODEL_PRIORITY = ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"]
+
+def generate_with_fallback(client, prompt, system_prompt):
+    """
+    Attempts to generate content using models in priority order.
+    Falls back to next model if 429 (Resource Exhausted) or 503 (Service Unavailable) occurs.
+    """
+    last_error = None
+    
+    for model in MODEL_PRIORITY:
+        try:
+            logger.info(f"Attempting generation with model: {model}")
+            print(f"DEBUG: Trying model {model}...")
+            
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt
+                )
+            )
+            print(f"DEBUG: Success with model {model}!")
+            return response.text.strip(), model
+            
+        except Exception as e:
+            error_str = str(e)
+            # Check for rate limit (429) or service unavailable (503)
+            if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "503" in error_str:
+                print(f"WARNING: Model {model} failed with quota/service error. Trying next...")
+                logger.warning(f"Model {model} failed: {e}")
+                last_error = e
+                continue # Try next model
+            else:
+                # If it's a different error (like Auth or Bad Request), fail immediately
+                print(f"CRITICAL ERROR: Non-retriable error with {model}: {e}")
+                raise e
+    
+    # If we run out of models
+    print("CRITICAL ERROR: All models failed.")
+    raise last_error
+
 async def run_planner(calendar_events, tasks, target_date, day_start_hour=0, day_end_hour=24, user_preferences_text=""):
     """
     Main planner function with semantic understanding and user preferences.
-    
-    Args:
-        calendar_events: Google Calendar events
-        tasks: Tasks to schedule
-        target_date: Target date for planning
-        day_start_hour: User's day start hour (0-23)
-        day_end_hour: User's day end hour (0-24)
-        user_preferences_text: Optional user preferences string for AI
     """
     api_key = os.environ.get('GEMINI_API_KEY')
     if not api_key:
@@ -196,22 +231,14 @@ Analyze and optimize. Return valid JSON only."""
         if user_preferences_text:
             system_prompt += f"\n\n{user_preferences_text}"
 
-        # Generate content
-        logger.info(f"Generating schedule with model gemini-2.0-flash")
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt
-            )
-        )
-        print("DEBUG: Gemini API call successful.")
-        text = response.text.strip()
-        logger.info(f"AI Response received, length: {len(text)}")
+        # Generate content with fallback
+        text, used_model = generate_with_fallback(client, prompt, system_prompt)
+        
+        logger.info(f"AI Response received from {used_model}, length: {len(text)}")
         
         # Log AI response to file
         with open("planner_debug.log", "a") as logfile:
-            logfile.write(f"AI Response: {text[:1000]}...\n")
+            logfile.write(f"AI Response ({used_model}): {text[:1000]}...\n")
 
         # Clean up markdown code blocks if present
         if text.startswith("```"):
@@ -253,18 +280,11 @@ Original request:
 
 Return corrected JSON only."""
             
-            retry_response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=retry_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt
-                )
-            )
-            retry_text = retry_response.text.strip()
+            retry_text, retry_model = generate_with_fallback(client, retry_prompt, system_prompt)
             
             # Log retry
             with open("planner_debug.log", "a") as logfile:
-                logfile.write(f"RETRY Response: {retry_text[:500]}...\n")
+                logfile.write(f"RETRY Response ({retry_model}): {retry_text[:500]}...\n")
             
             # Clean markdown
             if retry_text.startswith("```"):
